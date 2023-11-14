@@ -1,8 +1,7 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using Vuplex.WebView;
+using Task = System.Threading.Tasks.Task;
 
 public class WebViewInstantiaionDemo : MonoBehaviour
 {
@@ -25,19 +24,35 @@ public class WebViewInstantiaionDemo : MonoBehaviour
         _webViewPrefabGO.SetActive(true);
         
         WebViewPrefab webViewPrefab = _webViewPrefabGO.GetComponent<WebViewPrefab>();
+
+#if UNITY_ANDROID && !UNITY_EDITOR
         webViewPrefab.SetOptionsForInitialization(new WebViewOptions
         {
             preferredPlugins = new WebPluginType[] { WebPluginType.Android }
-        });
+        });  
+#endif
+        
         webViewPrefab.HoveringEnabled = true;
         
         await webViewPrefab.WaitUntilInitialized();
         
         var surface = ovrOverlay.externalSurfaceObject;
+        
+        await Task.Delay(500);
+        //
+        // while (surface == IntPtr.Zero)
+        // {
+        //     await Task.Delay(100);
+        //     Debug.Log("waiting for surface pointer");
+        // }
+        
+        Debug.Log($"pointer is: {surface.ToString()}");
+                
+       
         // webViewPrefab.Resize(ovrOverlay.externalSurfaceWidth, ovrOverlay.externalSurfaceHeight);
         #if UNITY_ANDROID && !UNITY_EDITOR
-            var androidWebView = webViewPrefab.WebView as AndroidWebView;
-            androidWebView.SetSurface(surface);
+            // var androidWebView = webViewPrefab.WebView as AndroidWebView;
+            // androidWebView.SetSurface(surface);
         #endif
         
         Debug.Log($"plugin type: {webViewPrefab.WebView.PluginType}");
