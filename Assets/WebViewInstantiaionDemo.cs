@@ -28,7 +28,7 @@ public class WebViewInstantiaionDemo : MonoBehaviour
 #if UNITY_ANDROID && !UNITY_EDITOR
         webViewPrefab.SetOptionsForInitialization(new WebViewOptions
         {
-            preferredPlugins = new WebPluginType[] { WebPluginType.Android }
+            preferredPlugins = new WebPluginType[] { WebPluginType.AndroidGecko }
         });  
 #endif
         
@@ -36,66 +36,64 @@ public class WebViewInstantiaionDemo : MonoBehaviour
         
         await webViewPrefab.WaitUntilInitialized();
         
-        var surface = ovrOverlay.externalSurfaceObject;
         
-        await Task.Delay(500);
-        //
-        // while (surface == IntPtr.Zero)
-        // {
-        //     await Task.Delay(100);
-        //     Debug.Log("waiting for surface pointer");
-        // }
+        Debug.Log($"plugin type: {webViewPrefab.WebView.PluginType}");
+        
+        webViewPrefab.WebView.LoadUrl("https://webview-popup-tester.vercel.app/");
+        await webViewPrefab.WebView.WaitForNextPageLoadToFinish();
+        Debug.Log("setting up popups");
+        var webViewWithPopups = webViewPrefab.WebView as IWithPopups;
+        if (webViewWithPopups != null) {
+            Debug.Log("setting up popups in new webview");
+            webViewWithPopups.SetPopupMode(PopupMode.LoadInNewWebView);
+
+            webViewWithPopups.PopupRequested += async (sender, eventArgs) => {
+                Debug.Log("Popup opened with URL: " + eventArgs.Url);
+                // Create and display a new WebViewPrefab for the popup.
+                
+                GameObject _webViewPrefabPopupGO = Instantiate(_WebViewPrefab, new Vector3(0, 1f, 2.0f), Quaternion.Euler(0, 180, 0));
+                
+                Debug.Log("Popup webview instantiated");
+                
+                _webViewPrefabGO.SetActive(true);
+                
+                WebViewPrefab popupPrefab = _webViewPrefabPopupGO.GetComponent<WebViewPrefab>();
+                popupPrefab.SetOptionsForInitialization(new WebViewOptions
+                       {
+                           preferredPlugins = new WebPluginType[] { WebPluginType.Android }
+                       });
+                popupPrefab.SetWebViewForInitialization(eventArgs.WebView);
+                popupPrefab.HoveringEnabled = true;
+
+                Debug.Log("Popup webview initialization options added");
+                
+                await popupPrefab.WaitUntilInitialized();
+                
+                Debug.Log("Popup webview initialized");
+                popupPrefab.WebView.CloseRequested += (popupWebView, closeEventArgs) => {
+                    Debug.Log("Closing the popup");
+                    popupPrefab.Destroy();
+                };
+            };
+                }
+
+        
+        await Task.Delay(1000);
+        
+        var surface = ovrOverlay.externalSurfaceObject;
+        while (surface == IntPtr.Zero)
+        {
+            await Task.Delay(100);
+            Debug.Log("waiting for surface pointer");
+        }
         
         Debug.Log($"pointer is: {surface.ToString()}");
                 
        
         // webViewPrefab.Resize(ovrOverlay.externalSurfaceWidth, ovrOverlay.externalSurfaceHeight);
         #if UNITY_ANDROID && !UNITY_EDITOR
-            // var androidWebView = webViewPrefab.WebView as AndroidWebView;
-            // androidWebView.SetSurface(surface);
+            var androidWebView = webViewPrefab.WebView as AndroidGeckoWebView;
+            androidWebView.SetSurface(surface);
         #endif
-        
-        Debug.Log($"plugin type: {webViewPrefab.WebView.PluginType}");
-        
-        webViewPrefab.WebView.LoadUrl("https://webview-popup-tester.vercel.app/");
-                await webViewPrefab.WebView.WaitForNextPageLoadToFinish();
-                Debug.Log("setting up popups");
-                var webViewWithPopups = webViewPrefab.WebView as IWithPopups;
-                if (webViewWithPopups != null) {
-                    
-                    Debug.Log("setting up popups in new webview");
-                    webViewWithPopups.SetPopupMode(PopupMode.LoadInNewWebView);
-        
-                    webViewWithPopups.PopupRequested += async (sender, eventArgs) => {
-                        Debug.Log("Popup opened with URL: " + eventArgs.Url);
-                        // Create and display a new WebViewPrefab for the popup.
-                        
-                        GameObject _webViewPrefabPopupGO = Instantiate(_WebViewPrefab, new Vector3(0, 1f, 2.0f), Quaternion.Euler(0, 180, 0));
-                        
-                        Debug.Log("Popup webview instantiated");
-                        
-                        _webViewPrefabGO.SetActive(true);
-                        
-                        WebViewPrefab popupPrefab = _webViewPrefabPopupGO.GetComponent<WebViewPrefab>();
-                        popupPrefab.SetOptionsForInitialization(new WebViewOptions
-                               {
-                                   preferredPlugins = new WebPluginType[] { WebPluginType.Android }
-                               });
-                        popupPrefab.SetWebViewForInitialization(eventArgs.WebView);
-                        popupPrefab.HoveringEnabled = true;
-
-                        Debug.Log("Popup webview initialization options added");
-                        
-                        await popupPrefab.WaitUntilInitialized();
-                        
-                        Debug.Log("Popup webview initialized");
-                        popupPrefab.WebView.CloseRequested += (popupWebView, closeEventArgs) => {
-                            Debug.Log("Closing the popup");
-                            popupPrefab.Destroy();
-                        };
-                    };
-                }
-                
-        
     }
 }
